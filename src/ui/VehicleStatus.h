@@ -59,3 +59,5 @@ void update_steering(int32_t leftRaw, int32_t rightRaw);
 
 // Called when HEGE authentication / control mode changes
 void update_vehicle_mode(bool manualMode);
+
+void update_vehicle_status_timeout();

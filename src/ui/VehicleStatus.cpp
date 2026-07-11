@@ -4,6 +4,14 @@
 // Global vehicle status object
 // ==========================
 
+static unsigned long lastBatteryMs = 0;
+static unsigned long lastSpeedMs = 0;
+static unsigned long lastEstopMs = 0;
+
+static const unsigned long BATTERY_TIMEOUT_MS = 1000;
+static const unsigned long SPEED_TIMEOUT_MS = 500;
+static const unsigned long ESTOP_TIMEOUT_MS = 1000;
+
 VehicleStatus vehicleStatus = {
     false,              // canConnected = HEGE authenticated / takes control
 
@@ -179,6 +187,8 @@ void parse_can_message(uint32_t id, const uint8_t* data, uint8_t dlc)
     // ==========================
 
     if (id == 0x215) {
+        lastBatteryMs = millis();
+    
         uint16_t socRaw = read_u16_le(&data[6]);
 
         vehicleStatus.battery = socRaw * 0.1f;
@@ -192,6 +202,7 @@ void parse_can_message(uint32_t id, const uint8_t* data, uint8_t dlc)
     // ==========================
 
     if (id == 0x315) {
+        lastSpeedMs = millis();
         int32_t leftRaw = read_i32_le(&data[0]);
         int32_t rightRaw = read_i32_le(&data[4]);
 
@@ -211,11 +222,39 @@ void parse_can_message(uint32_t id, const uint8_t* data, uint8_t dlc)
     // ==========================
 
     if (id == 0x515) {
+        lastEstopMs = millis();
         uint8_t estopRaw = data[4] & 0x03;
 
         vehicleStatus.emergencyReleased = (estopRaw == 0);
         vehicleStatus.estopValid = true;
 
         return;
+    }
+}
+
+void update_vehicle_status_timeout()
+{
+    unsigned long now = millis();
+
+    if (vehicleStatus.batteryValid &&
+        now - lastBatteryMs > BATTERY_TIMEOUT_MS) {
+        vehicleStatus.batteryValid = false;
+        vehicleStatus.battery = 0.0f;
+    }
+
+    if (vehicleStatus.speedValid &&
+        now - lastSpeedMs > SPEED_TIMEOUT_MS) {
+        vehicleStatus.speedValid = false;
+        vehicleStatus.leftSpeed = 0;
+        vehicleStatus.rightSpeed = 0;
+
+        vehicleStatus.steeringValid = false;
+        vehicleStatus.steering = DIRECTION_NULL;
+    }
+
+    if (vehicleStatus.estopValid &&
+        now - lastEstopMs > ESTOP_TIMEOUT_MS) {
+        vehicleStatus.estopValid = false;
+        vehicleStatus.emergencyReleased = true;
     }
 }

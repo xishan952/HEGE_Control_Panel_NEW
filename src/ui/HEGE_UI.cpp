@@ -129,10 +129,11 @@ void update_hege_ui(lv_timer_t *timer)
     lv_label_set_text(label_steering, buffer);
 
     if (vehicleStatus.speedValid) {
-        snprintf(buffer, sizeof(buffer), "Speed: L %d | R %d",
-                 vehicleStatus.leftSpeed, vehicleStatus.rightSpeed);
+    snprintf(buffer, sizeof(buffer), "Speed: L %d | R %d",
+             vehicleStatus.leftSpeed,
+             vehicleStatus.rightSpeed);
     } else {
-        snprintf(buffer, sizeof(buffer), "Speed: L NULL | R NULL");
+    snprintf(buffer, sizeof(buffer), "Speed: L NULL | R NULL");
     }
     lv_label_set_text(label_speed, buffer);
 

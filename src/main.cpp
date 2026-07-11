@@ -150,6 +150,7 @@ void loop()
             rxFrame.dlc
         );
     }
+    update_vehicle_status_timeout();
 
     if (millis() - lastPrintMs >= 1000) {
         lastPrintMs = millis();
