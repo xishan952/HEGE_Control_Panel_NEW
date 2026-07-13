@@ -2,7 +2,6 @@
 
 enum class ControlState {
     AUTO_MODE,
-    WAIT_CHALLENGE,
-    WAIT_EXT_CONTROL_OK,
+    WAIT_ANSWER_OK,
     MANUAL_ACTIVE
 };

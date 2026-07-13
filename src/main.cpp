@@ -2,6 +2,13 @@
 
 #include "can/CanDriver.h"
 #include "can/CanFrame.h"
+#include "can/CanProtocol.h"
+
+#include "input/InputData.h"
+#include "input/PhysicalInput.h"
+
+#include "state/ControlStateMachine.h"
+
 #include "ui/VehicleStatus.h"
 
 #include <esp_display_panel.hpp>
@@ -16,7 +23,10 @@ static unsigned long lastPrintMs = 0;
 
 static void printByteHex(uint8_t value)
 {
-    if (value < 0x10) Serial.print("0");
+    if (value < 0x10) {
+        Serial.print("0");
+    }
+
     Serial.print(value, HEX);
 }
 
@@ -40,8 +50,22 @@ static void printVehicleStatus()
 {
     Serial.println("---------- VehicleStatus ----------");
 
-    Serial.print("CAN connected: ");
-    Serial.println(vehicleStatus.canConnected ? "true" : "false");
+    Serial.print("Control source: ");
+
+    switch (vehicleStatus.controlSource) {
+        case CONTROL_SOURCE_REMOTE:
+            Serial.println("REMOTE CONTROL");
+            break;
+
+        case CONTROL_SOURCE_PANEL:
+            Serial.println("PANEL CONTROL");
+            break;
+
+        case CONTROL_SOURCE_ERROR:
+        default:
+            Serial.println("ERROR");
+            break;
+}
 
     Serial.print("Battery valid: ");
     Serial.println(vehicleStatus.batteryValid ? "true" : "false");
@@ -88,9 +112,11 @@ void setup()
 
 #if ESP_PANEL_DRIVERS_BUS_ENABLE_RGB && CONFIG_IDF_TARGET_ESP32S3
     auto lcd_bus = lcd->getBus();
+
     if (lcd_bus->getBasicAttributes().type == ESP_PANEL_BUS_TYPE_RGB) {
         static_cast<BusRGB *>(lcd_bus)->configRGB_BounceBufferSize(
-            lcd->getFrameWidth() * 10);
+            lcd->getFrameWidth() * 10
+        );
     }
 #endif
 #endif
@@ -117,8 +143,8 @@ void setup()
         Serial.println("[INIT] CAN not ready.");
     }
 
-    // 不要开机默认 Automatic
-    // update_vehicle_mode(false);
+    physical_input_init();
+    control_state_init();
 
     Serial.println("Before LVGL init");
     lvgl_port_init(board->getLCD(), board->getTouch());
@@ -150,10 +176,16 @@ void loop()
             rxFrame.dlc
         );
     }
+
+    PhysicalInput input = read_physical_input();
+
+    control_state_update(input);
+
     update_vehicle_status_timeout();
 
     if (millis() - lastPrintMs >= 1000) {
         lastPrintMs = millis();
+
         Serial.println("loop alive");
         printVehicleStatus();
     }

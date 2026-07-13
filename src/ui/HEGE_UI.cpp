@@ -78,13 +78,28 @@ void update_hege_ui(lv_timer_t *timer)
 
     char buffer[100];
 
-    // canConnected now means HEGE is authenticated / taking control
-    snprintf(buffer, sizeof(buffer), "CAN Status: %s",
-             vehicleStatus.canConnected ? "Connected" : "ERROR");
+    switch (vehicleStatus.controlSource) {
+        case CONTROL_SOURCE_REMOTE:
+            snprintf(buffer, sizeof(buffer),
+                     "Control Source: REMOTE CONTROL");
+            break;
+
+        case CONTROL_SOURCE_PANEL:
+            snprintf(buffer, sizeof(buffer),
+                     "Control Source: PANEL CONTROL");
+            break;
+
+        case CONTROL_SOURCE_ERROR:
+        default:
+            snprintf(buffer, sizeof(buffer),
+                     "Control Source: ERROR");
+            break;
+    }
     lv_label_set_text(label_can, buffer);
 
     if (vehicleStatus.batteryValid) {
-        snprintf(buffer, sizeof(buffer), "Battery Level: %.1f %%", vehicleStatus.battery);
+        snprintf(buffer, sizeof(buffer), "Battery Level: %.1f %%",
+                 vehicleStatus.battery);
     } else {
         snprintf(buffer, sizeof(buffer), "Battery Level: NULL");
     }
@@ -93,7 +108,7 @@ void update_hege_ui(lv_timer_t *timer)
     if (!vehicleStatus.driveModeValid) {
         snprintf(buffer, sizeof(buffer), "Drive Mode: NULL");
     }
-    else if (vehicleStatus.canConnected) {
+    else if (vehicleStatus.manualMode) {
         snprintf(buffer, sizeof(buffer), "Drive Mode: Manual");
     }
     else {
@@ -129,20 +144,16 @@ void update_hege_ui(lv_timer_t *timer)
     lv_label_set_text(label_steering, buffer);
 
     if (vehicleStatus.speedValid) {
-    snprintf(buffer, sizeof(buffer), "Speed: L %d | R %d",
-             vehicleStatus.leftSpeed,
-             vehicleStatus.rightSpeed);
+        snprintf(buffer, sizeof(buffer), "Speed: L %d | R %d",
+                 vehicleStatus.leftSpeed,
+                 vehicleStatus.rightSpeed);
     } else {
-    snprintf(buffer, sizeof(buffer), "Speed: L NULL | R NULL");
+        snprintf(buffer, sizeof(buffer), "Speed: L NULL | R NULL");
     }
     lv_label_set_text(label_speed, buffer);
 
-    if (vehicleStatus.estopValid) {
-        snprintf(buffer, sizeof(buffer), "Emergency Stop: %s",
-                 vehicleStatus.emergencyReleased ? "Released" : "Pressed");
-    } else {
-        snprintf(buffer, sizeof(buffer), "Emergency Stop: NULL");
-    }
+    snprintf(buffer, sizeof(buffer), "Emergency Stop: %s",
+             vehicleStatus.estopCommandSent ? "SEND" : "NULL");
     lv_label_set_text(label_estop, buffer);
 
     lv_obj_invalidate(lv_scr_act());

@@ -16,5 +16,7 @@ struct PhysicalInput {
     bool speedUp = false;
     bool speedDown = false;
 
+    bool estop = false;
+
     PanelMode selectedMode = PanelMode::AUTO;
 };
