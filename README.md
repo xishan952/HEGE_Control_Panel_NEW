@@ -141,3 +141,45 @@ input/ – Handles physical button and mode inputs received from the external ES
 state/ – Implements the AUTO/MANUAL control state machine and generates vehicle control commands.
 ui/ – Stores vehicle status information and manages the LVGL-based display interface.
 External_Input_Board/ – Contains the firmware for the external ESP32 board responsible for reading physical control inputs and transmitting them to the main control panel.
+
+
+## Important Notes
+The repository contains two separate PlatformIO projects:
+
+The root directory contains the firmware for the main HEGE control panel.
+The extension/ directory contains the firmware for the external ESP32 input board.
+
+Each board has its own src/ directory and platformio.ini and must therefore be opened and uploaded as a separate PlatformIO project.
+
+Building and Uploading
+1.Main Control Panel
+
+To build or upload the firmware for the main control panel:
+
+Clone or download the complete repository.
+Open Visual Studio Code with the PlatformIO extension installed.
+Select Open Folder and open the repository root:
+HEGE_Control_Panel_NEW/
+PlatformIO will use the following configuration and source files:
+HEGE_Control_Panel_NEW/platformio.ini
+HEGE_Control_Panel_NEW/src/
+Connect the main control panel to the computer via USB.
+Use PlatformIO → Build to compile the project.
+Use PlatformIO → Upload to upload the firmware to the main control panel.
+
+2.External Input Board
+
+The external input board must be opened as a separate PlatformIO project.
+
+In Visual Studio Code, select Open Folder.
+Open:
+HEGE_Control_Panel_NEW/extension/
+PlatformIO will then use:
+extension/platformio.ini
+extension/src/
+Connect the external ESP32 board to the computer via USB.
+Use PlatformIO → Build to compile the external-board firmware.
+Use PlatformIO → Upload to upload the firmware.
+
+Important: Do not build the external input board by opening only the repository root. The main control panel and the external input board are two independent PlatformIO projects and must be opened separately when compiling or uploading their firmware.
+
