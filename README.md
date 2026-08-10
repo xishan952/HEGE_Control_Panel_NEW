@@ -2,6 +2,9 @@
 
 ## 1. Overview
 The HEGE Control Panel is an ESP32-S3-based system for vehicle monitoring and manual control. It receives physical control inputs, communicates with the vehicle via CAN bus, and displays vehicle and control status through an LVGL-based user interface.
+
+Development：PlatformIO
+
 ## 2. Hardware
 |  GPIO / Expander Pin  |
 |----------------|------|
@@ -14,7 +17,6 @@ The HEGE Control Panel is an ESP32-S3-based system for vehicle monitoring and ma
 | Speed + Button | 08 |
 | Speed - Button | 09 |
 | ManuelModeSwitch | 12 |
-
 
 -Baud rate：115200 
 -Physical inputs: 4 direction buttons, 2 speed buttons, 1 rotary encoder for MANUAL / AUTO mode selection
