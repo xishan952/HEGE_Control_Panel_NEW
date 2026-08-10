@@ -20,53 +20,30 @@
 -Physical inputs: 4 direction buttons, 2 speed buttons, 1 rotary encoder for MANUAL / AUTO mode selection
 -CAN reception remains active in both MANUAL and AUTO mode.
 
-## 3. State Machine
+## 3. State mashine
+AUTO_MODE ──(mode encoder selects MANUAL /
+              send external control request)──► WAIT_EXT_CONTROL_OK(0x215 recieved)
+    ▲              (0x195 send)                         │
+    │                                                   │
+    │                                                   │
+    │                  (request denied                  │
+    │                      or timeout)                  │
+    └───────────────────────────────────────────────────┘
+                                                        │
+                                      (main system accepted) 
+                                                        │
+                                                        ▼
+                                                MANUAL_ACTIVE(0x295)
+                                                        │
+                                                        │
+                         (mode encoder selects AUTO /
+                          send manual release)          │
+                                                        │
+                                                        ▼
+                                                   AUTO_MODE
 
 
-AUTO_MODE ──(mode selector selects MANUAL /
-             send manual control request)──────► WAIT_ANSWER_OK
-                    (0x150 sent)                      │
-                                                      │
-                                                      │
-                         (mode selector               │
-                          returns to AUTO)            │
-                                                      │
-        ▲                                             │
-        │                                             │
-        └─────────────────────────────────────────────┘
-                                                      │
-                                                      │
-                              (0x140 received,
-                               Byte 0 = 0x01)
-                                                      │
-                                                      ▼
-
-                                             MANUAL_ACTIVE
-                                             (PANEL CONTROL)
-                                                      │
-                                                      │
-                     direction input + preset speed   │
-                     send 0x330 periodically          │
-                                                      │
-                                                      │
-                       (mode selector selects AUTO)   │
-                                                      │
-                                                      ▼
-
-                                                 AUTO_MODE
-
-
-##Emergency Stop:
-
-ANY STATE
-    │
-    │  external E-Stop pressed
-    │
-    ▼
-SEND 0x150
-Byte 7 = 0xFF
-    │
-    └── current state remains unchanged
+:CAN messages are always received; Physical input is always read, but physical input is only accepted in MANUAL_ACTIVE.
 
 ## 4. CAN Communication
    ### 4.1 Received CAN Messages
@@ -75,7 +52,7 @@ Byte 7 = 0xFF
       0x315  |  recieve speed feedback
       0x215  |  Receive control confirmation / challenge / status feedback, including SOC
 
-  **0x215**
+**0x215**
 | Byte | Content |
 | 0    | activation status   
 | 1    | random number
@@ -84,60 +61,35 @@ Byte 7 = 0xFF
 | 4    | Feedback of outputs 
 | 5    | current gear
 | 6-7  | SOC    
-  **0x315**
+**0x315**
  | Byte | Content |
  |0–3	  | speed left	signed |
  |4–7	  | speed right	signed |
    
-### 4.2 Sent CAN Messages
-0x150 | Send manual control request or emergency stop command
-0x330 | Send manual wheel direction and speed command
+   ### 4.2 Transmitted CAN Messages
 
-0x150
+   0x195  |  Send external control request / auth reply / deactivate
+   0x295  |  speed control (direktions & speed)
 
-Manual control request:
+   
+**0x295 speed frame layout:**
 
-Byte	Content
-0	0x02
-1-6	0x00
-7	0x00
-DATA = 02 00 00 00 00 00 00 00
+| Byte | Content |
 
-Emergency stop:
+| 0 | `0x03 \| (dir << 4) \| (dir << 6)` — direction flags | 
+| 1–2 | Speed magnitude, little-endian (repeated in bytes 3–4) |
+| 5 | `0x01` (active flag) |
+| 6–7 | `0x00` |
 
-Byte	Content
-0-6	0x00
-7	0xFF
-DATA = 00 00 00 00 00 00 00 FF
+**byte 0**
+|Vehicle movement | dir_left | dir_right |
 
-0x330
+| Forward         |   `1`    |    `1`    |
+| Backward        |   `2`    |    `2`    |
+| Left turn       |   `2`    |    `1`    |
+| Right turn      |   `1`    |    `2`    |
+| Neutral / Stop  |   `0`    |    `0`    |
 
-Byte	Content
-0	left/right wheel direction
-1-2	left wheel speed
-3-4	right wheel speed
-5	gear
-6-7	0x00
-
-Direction values:
-
-0 = Neutral
-1 = Forward
-2 = Backward
-
-Current movement mapping:
-
-Forward    | Left = 1 | Right = 1
-Backward   | Left = 2 | Right = 2
-Left Turn  | Left = 2 | Right = 1
-Right Turn | Left = 1 | Right = 2
-
-Speed range:
-
-0-1000
-Default preset speed = 300
-SpeedUp   = +100 per press
-SpeedDown = -100 per press
    ### 4.3 CAN Timeout
    
 ## 5. UI Layout

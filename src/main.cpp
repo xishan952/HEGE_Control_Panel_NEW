@@ -2,12 +2,23 @@
 
 #include "can/CanDriver.h"
 #include "can/CanFrame.h"
+#include "can/CanProtocol.h"
+
+#include "input/InputData.h"
+#include "input/PhysicalInput.h"
+
+#include "state/ControlStateMachine.h"
+
 #include "ui/VehicleStatus.h"
+#include "DebugConfig.h"
 
 #include <esp_display_panel.hpp>
+
+#if HEGE_UI_ENABLED
 #include <lvgl.h>
 #include "lvgl_v8_port.h"
 #include "ui/HEGE_UI.h"
+#endif
 
 using namespace esp_panel::drivers;
 using namespace esp_panel::board;
@@ -16,7 +27,10 @@ static unsigned long lastPrintMs = 0;
 
 static void printByteHex(uint8_t value)
 {
-    if (value < 0x10) Serial.print("0");
+    if (value < 0x10) {
+        Serial.print("0");
+    }
+
     Serial.print(value, HEX);
 }
 
@@ -40,8 +54,22 @@ static void printVehicleStatus()
 {
     Serial.println("---------- VehicleStatus ----------");
 
-    Serial.print("CAN connected: ");
-    Serial.println(vehicleStatus.canConnected ? "true" : "false");
+    Serial.print("Control source: ");
+
+    switch (vehicleStatus.controlSource) {
+        case CONTROL_SOURCE_REMOTE:
+            Serial.println("REMOTE CONTROL");
+            break;
+
+        case CONTROL_SOURCE_PANEL:
+            Serial.println("PANEL CONTROL");
+            break;
+
+        case CONTROL_SOURCE_ERROR:
+        default:
+            Serial.println("ERROR");
+            break;
+}
 
     Serial.print("Battery valid: ");
     Serial.println(vehicleStatus.batteryValid ? "true" : "false");
@@ -72,26 +100,37 @@ static void printVehicleStatus()
 
 void setup()
 {
+    Serial.setRxBufferSize(2048);
     Serial.begin(115200);
     delay(1000);
 
     Serial.println("===== HEGE MAIN START =====");
+
+    if (HEGE_UI_ENABLED) {
+        Serial.println("UI mode: enabled");
+    } else {
+        Serial.println("UI mode: disabled (HEGE_DISABLE_UI=1)");
+    }
 
     Serial.println("Initializing board");
 
     Board *board = new Board();
     board->init();
 
+#if HEGE_UI_ENABLED
 #if LVGL_PORT_AVOID_TEARING_MODE
     auto lcd = board->getLCD();
     lcd->configFrameBufferNumber(LVGL_PORT_DISP_BUFFER_NUM);
 
 #if ESP_PANEL_DRIVERS_BUS_ENABLE_RGB && CONFIG_IDF_TARGET_ESP32S3
     auto lcd_bus = lcd->getBus();
+
     if (lcd_bus->getBasicAttributes().type == ESP_PANEL_BUS_TYPE_RGB) {
         static_cast<BusRGB *>(lcd_bus)->configRGB_BounceBufferSize(
-            lcd->getFrameWidth() * 10);
+            lcd->getFrameWidth() * 10
+        );
     }
+#endif
 #endif
 #endif
 
@@ -117,9 +156,10 @@ void setup()
         Serial.println("[INIT] CAN not ready.");
     }
 
-    // 不要开机默认 Automatic
-    // update_vehicle_mode(false);
+    physical_input_init();
+    control_state_init();
 
+#if HEGE_UI_ENABLED
     Serial.println("Before LVGL init");
     lvgl_port_init(board->getLCD(), board->getTouch());
     Serial.println("After LVGL init");
@@ -135,14 +175,20 @@ void setup()
     lvgl_port_unlock();
 
     Serial.println("HEGE UI started");
+#else
+    Serial.println("Skipping LVGL and UI initialization.");
+#endif
 }
 
 void loop()
 {
     CanFrame rxFrame;
+    int rxCount = 0;
 
-    while (can_driver_receive(rxFrame)) {
-        printCanFrame(rxFrame);
+    while (can_driver_receive(rxFrame) && rxCount < 10) {
+        rxCount++;
+
+        // printCanFrame(rxFrame);   // 注释掉高频打印
 
         parse_can_message(
             rxFrame.id,
@@ -150,13 +196,18 @@ void loop()
             rxFrame.dlc
         );
     }
+    PhysicalInput input = read_physical_input();
+
+    control_state_update(input);
+
     update_vehicle_status_timeout();
 
-    if (millis() - lastPrintMs >= 1000) {
-        lastPrintMs = millis();
-        Serial.println("loop alive");
-        printVehicleStatus();
-    }
+    // if (millis() - lastPrintMs >= 1000) {
+    //     lastPrintMs = millis();
 
-    delay(5);
+    //     Serial.println("loop alive");
+    //     printVehicleStatus();
+    //}
+
+    //delay(5);
 }

@@ -124,7 +124,7 @@ bool can_driver_send(const CanFrame& frame)
         message.data[i] = frame.data[i];
     }
 
-    esp_err_t result = twai_transmit(&message, pdMS_TO_TICKS(5));
+    esp_err_t result = twai_transmit(&message, pdMS_TO_TICKS(0));
 
     return result == ESP_OK;
 }

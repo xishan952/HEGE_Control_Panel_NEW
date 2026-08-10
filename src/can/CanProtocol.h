@@ -3,7 +3,6 @@
 #include <Arduino.h>
 
 #include "CanFrame.h"
-#include "../feedback/FeedbackData.h"
 
 // ================================================================
 // Command data for manual crawler control
@@ -24,19 +23,36 @@ struct ManualControlCommand {
 };
 
 // ================================================================
+// RX status
+// ================================================================
+
+// Set to true when CAN ID 0x140 is received
+// with Byte 0 == 0x01.
+extern bool controlAnswerOk;
+
+// ================================================================
 // RX parsing
 // ================================================================
 
-bool parseStatus215(const CanFrame& frame, MainSystemFeedback& feedback);
-bool parseSpeed315(const CanFrame& frame, MainSystemFeedback& feedback);
+void parse_can_message(
+    uint32_t id,
+    const uint8_t* data,
+    uint8_t dlc
+);
+
+void update_vehicle_status_timeout();
 
 // ================================================================
 // TX frame builders
 // ================================================================
 
-CanFrame buildExternalControlRequest195();
-CanFrame buildAuthReply195(uint8_t randomNumber, uint8_t shiftValue);
-CanFrame buildDeactivate195();
+// 0x150: request manual control
+CanFrame buildControlRequest150();
 
-CanFrame buildNeutral295();
-CanFrame buildManualControl295(const ManualControlCommand& command);
+// 0x150: send emergency stop command
+CanFrame buildEstop150();
+
+// 0x330: manual crawler speed command
+CanFrame buildSpeedCommand330(
+    const ManualControlCommand& command
+);

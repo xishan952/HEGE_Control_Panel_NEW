@@ -15,18 +15,28 @@ enum VehicleDirection {
 };
 
 // ==========================
+// Current control source
+// ==========================
+
+enum ControlSource {
+    CONTROL_SOURCE_ERROR,
+    CONTROL_SOURCE_REMOTE,
+    CONTROL_SOURCE_PANEL
+};
+
+// ==========================
 // Vehicle status data structure
-// Main program updates this structure.
+// CAN protocol and control logic update this structure.
 // UI only reads from it.
 // ==========================
 
 struct VehicleStatus {
-    bool canConnected;          // true = HEGE authenticated / takes control
+    ControlSource controlSource;
 
     bool batteryValid;
     float battery;              // percent, SOC raw * 0.1
 
-    bool driveModeValid;        // false = Null, true = CAN activity detected
+    bool driveModeValid;
     bool manualMode;            // true = Manual, false = Automatic
 
     bool steeringValid;
@@ -36,8 +46,7 @@ struct VehicleStatus {
     int leftSpeed;              // scaled value: 0 ... 1000
     int rightSpeed;             // scaled value: 0 ... 1000
 
-    bool estopValid;
-    bool emergencyReleased;     // true = Released, false = Pressed
+    bool estopCommandSent;      // true = external E-Stop input active / 0x150 sent
 };
 
 // ==========================
@@ -48,16 +57,15 @@ struct VehicleStatus {
 extern VehicleStatus vehicleStatus;
 
 // ==========================
-// Function declarations
+// Vehicle status functions
 // ==========================
 
 void reset_vehicle_status();
 
-void parse_can_message(uint32_t id, const uint8_t* data, uint8_t dlc);
-
-void update_steering(int32_t leftRaw, int32_t rightRaw);
+void update_steering(
+    int32_t leftRaw,
+    int32_t rightRaw
+);
 
 // Called when HEGE authentication / control mode changes
 void update_vehicle_mode(bool manualMode);
-
-void update_vehicle_status_timeout();

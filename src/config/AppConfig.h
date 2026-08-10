@@ -24,21 +24,28 @@
 #define MODE_AUTO_GPIO          11
 #define MODE_MANUAL_GPIO        12
 
-#define FAULT_LED_GPIO          14
+#define FAULT_LED_GPIO          13
 
 // ==========================
 // CAN IDs
 // ==========================
 
+// RX: teacher controller -> control panel
+#define CAN_ID_CONTROL_140      0x140
+
+// TX: control panel -> teacher controller
+#define CAN_ID_CONTROL_150      0x150
+#define CAN_ID_SPEED_330        0x330
+
+// Existing vehicle status messages
 #define CAN_ID_STATUS_215       0x215
 #define CAN_ID_SPEED_315        0x315
-#define CAN_ID_AUTH_195         0x195
-#define CAN_ID_CONTROL_295      0x295
 
 // ==========================
 // Timing
 // ==========================
 
 #define CAN_BITRATE             500000
-#define PERIOD_295_MS           10
+
+#define PERIOD_330_MS           20
 #define PERIOD_UI_UPDATE_MS     50
