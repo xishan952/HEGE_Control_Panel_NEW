@@ -51,7 +51,7 @@ void InputReader::begin()
 
     pinMode(BoardConfig::ESTOP_STATUS_PIN, INPUT_PULLUP);
 
-    // GPIO12：手动模式开关
+    // GPIO12：manual switch
     pinMode(BoardConfig::MANUAL_MODE_PIN, INPUT_PULLUP);
 
     stableControlMask_ = 0;
