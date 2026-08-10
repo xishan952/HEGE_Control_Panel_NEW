@@ -3,7 +3,7 @@
 #include "BoardConfig.h"
 
 // ================================================================
-// 初始化 UART
+// UART initialization
 // ================================================================
 
 void UartSender::begin()
@@ -17,7 +17,7 @@ void UartSender::begin()
 }
 
 // ================================================================
-// 生成并发送两字节输入报文
+// create and send a packet to main board
 // ================================================================
 
 UartPacket UartSender::send(const InputState &state)
@@ -25,7 +25,7 @@ UartPacket UartSender::send(const InputState &state)
     UartPacket packet;
 
     // ------------------------------------------------------------
-    // Byte 0：按钮和急停状态
+    // Byte 0：speed events, direction and e-stop
     // ------------------------------------------------------------
 
     if (state.forward) {
@@ -57,14 +57,14 @@ UartPacket UartSender::send(const InputState &state)
     }
 
     // ------------------------------------------------------------
-    // Byte 1：模式
+    // Byte 1：mode
     // ------------------------------------------------------------
 
     packet.mode =
         state.manualMode ? 0x01 : 0x00;
 
     // ------------------------------------------------------------
-    // 连续发送两个原始字节
+    // keep sending the packet to main board
     // ------------------------------------------------------------
 
     const uint8_t rawPacket[2] = {
@@ -72,11 +72,13 @@ UartPacket UartSender::send(const InputState &state)
         packet.mode
     };
 
+     Serial.printf("SEND buttons=0x%02X mode=0x%02X\n", packet.buttons, packet.mode);
+
     serial_.write(
         rawPacket,
         sizeof(rawPacket)
     );
 
-    // 返回实际发送的数据，供调试模块打印
+    // send real inputs back
     return packet;
 }

@@ -10,8 +10,6 @@ static UartSender uartSender;
 
 static uint32_t nextInputScanUs = 0;
 static uint32_t nextUartSendUs = 0;
-
-// 用于限制打印频率
 static uint8_t printDivider = 0;
 
 void setup()
@@ -34,7 +32,7 @@ void loop()
 {
     const uint32_t nowUs = micros();
 
-    // 每 1 ms 扫描输入
+    //scan the input in 10ms
     if (
         static_cast<int32_t>(
             nowUs - nextInputScanUs
@@ -46,7 +44,7 @@ void loop()
         inputReader.update();
     }
 
-    // 每 10 ms 获取并发送输入状态
+    // send the input state to main board in 10ms
     if (
         static_cast<int32_t>(
             nowUs - nextUartSendUs
@@ -61,8 +59,8 @@ void loop()
         uartSender.send(state);
 
         /*
-         * 速度加减事件必须立即打印，
-         * 因为下一次 consumeState() 后会被清除。
+         * print speedUp/speedDown events immediately,
+         * because they will be cleared after the next consumeState().
          */
         if (state.speedUp || state.speedDown) {
             print_physical_input(state);
@@ -70,8 +68,7 @@ void loop()
         }
         else {
             /*
-             * UART 每 10 ms 运行一次。
-             * 每累计 10 次打印一次，即每 100 ms 打印一次。
+             * run UART sending program every 10 ms, but only print every 100 ms.
              */
             ++printDivider;
 

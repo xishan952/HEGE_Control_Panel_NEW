@@ -3,8 +3,7 @@
 #include "BoardConfig.h"
 
 // ================================================================
-// 输入编号
-// 必须与UART Byte 0的bit位置一致
+// input index for six control inputs
 // ================================================================
 
 static constexpr uint8_t FORWARD_INDEX = 0;
@@ -15,7 +14,7 @@ static constexpr uint8_t SPEED_UP_INDEX = 4;
 static constexpr uint8_t SPEED_DOWN_INDEX = 5;
 
 // ================================================================
-// 六个控制输入GPIO
+// six control input GPIOs
 // ================================================================
 
 static constexpr int CONTROL_PINS[6] = {
@@ -28,7 +27,7 @@ static constexpr int CONTROL_PINS[6] = {
 };
 
 // ================================================================
-// 读取低电平有效输入
+// read GPIO pin with active low logic
 // ================================================================
 
 static bool readActiveLow(int pin)
@@ -37,7 +36,7 @@ static bool readActiveLow(int pin)
 }
 
 // ================================================================
-// 初始化GPIO
+// GPIO initialization
 // ================================================================
 
 void InputReader::begin()
@@ -71,13 +70,13 @@ void InputReader::begin()
 }
 
 // ================================================================
-// 每1 ms更新输入状态
+// updsate physical inputs and internal state
 // ================================================================
 
 void InputReader::update()
 {
     // ------------------------------------------------------------
-    // 1. 读取六个按钮并消抖
+    // 1. read 6 inputs
     // ------------------------------------------------------------
 
     for (uint8_t i = 0; i < 6; ++i) {
@@ -85,16 +84,16 @@ void InputReader::update()
         const uint8_t bit =
             static_cast<uint8_t>(1U << i);
 
-        // 修改前的稳定状态
+        // stable state before update
         const bool wasStableActive =
             (stableControlMask_ & bit) != 0;
 
-        // 读取真实GPIO电平
+        // read raw GPIO level
         const bool rawActive =
             readActiveLow(CONTROL_PINS[i]);
 
         // --------------------------------------------------------
-        // 消抖计数
+        // debounce counter
         // --------------------------------------------------------
 
         if (rawActive) {
@@ -111,7 +110,7 @@ void InputReader::update()
             }
         }
 
-        // 连续稳定按下后，把对应位设为1
+        // keeping stable state after debouncing
         if (
             controlCounters_[i] >=
             BoardConfig::DEBOUNCE_COUNT
@@ -119,21 +118,19 @@ void InputReader::update()
             stableControlMask_ |= bit;
         }
 
-        // 完全稳定松开后，把对应位清零
+        // clearing stable state after debouncing
         if (controlCounters_[i] == 0) {
             stableControlMask_ &=
                 static_cast<uint8_t>(~bit);
         }
 
-        // 修改后的稳定状态
+        // stable state after update
         const bool isStableActive =
             (stableControlMask_ & bit) != 0;
 
         // --------------------------------------------------------
-        // 检测稳定状态的 false → true
-        //
-        // 电气上对应 HIGH → LOW：
-        // 开关从未按下变成按下
+        // test for rising edge (HIGH → LOW)
+        // switch is active low
         // --------------------------------------------------------
 
         const bool pressedEdge =
@@ -151,7 +148,7 @@ void InputReader::update()
     }
 
     // ------------------------------------------------------------
-    // 2. 读取GPIO12手动模式开关
+    // 2. read manual mode switch
     // ------------------------------------------------------------
 
     const bool manualSwitchActive =
@@ -159,23 +156,17 @@ void InputReader::update()
 
     if (!manualSwitchActive) {
         /*
-         * 开关断开：
-         * 立即退出手动模式。
+         *manual mode turned off
          */
         manualMode_ = false;
         manualModeCounter_ = 0;
 
-        /*
-         * 防止在关闭模式后，
-         * 之前尚未发送的速度事件继续生效。
-         */
         speedUpEvent_ = false;
         speedDownEvent_ = false;
     }
     else if (!manualMode_) {
         /*
-         * 开关闭合：
-         * 稳定约20 ms后进入手动模式。
+         *manual mode turned on after 20ms
          */
         if (
             manualModeCounter_ <
@@ -193,16 +184,12 @@ void InputReader::update()
     }
 
     // ------------------------------------------------------------
-    // 3. 急停状态始终读取
+    // 3. read e-stop
     // ------------------------------------------------------------
 
     estopActive_ =
         readActiveLow(BoardConfig::ESTOP_STATUS_PIN);
 }
-
-// ================================================================
-// 获取状态并消费一次性事件
-// ================================================================
 
 InputState InputReader::consumeState()
 {
@@ -213,9 +200,7 @@ InputState InputReader::consumeState()
 
     if (manualMode_) {
         /*
-         * 方向按钮是持续状态。
-         *
-         * 只要按钮一直按着，对应值就一直是true。
+         * keep stable state after debouncing
          */
         state.forward =
             (stableControlMask_ &
@@ -234,19 +219,14 @@ InputState InputReader::consumeState()
              (1U << RIGHT_INDEX)) != 0;
 
         /*
-         * 速度按钮不是持续状态，
-         * 而是一次性按下事件。
+         * speedUp/speedDown events are not stable states after debouncing,
          */
         state.speedUp = speedUpEvent_;
         state.speedDown = speedDownEvent_;
     }
 
     /*
-     * 事件已经交给UART发送模块，
-     * 立即清除。
-     *
-     * 按钮保持按下不会再次触发，
-     * 必须先松开再重新按下。
+     * send the event state to the UART sending program, and clear it immediately.
      */
     speedUpEvent_ = false;
     speedDownEvent_ = false;

@@ -21,14 +21,13 @@ public:
     void begin();
 
     /*
-     * 发送当前输入状态。
+     * send current input state to main board
      *
-     * 返回值是实际发送的两个字节，
-     * 供 DebugPrinter 打印。
+     * for printing 
      */
     UartPacket send(const InputState &state);
 
 private:
-    // 使用 ESP32-S3 的 UART2
+    // use ESP32 UART2 for communication with main board
     HardwareSerial serial_{2};
 };

@@ -7,39 +7,38 @@
 class InputReader
 {
 public:
-    // 初始化所有输入GPIO
+    // initialisation
     void begin();
 
-    // 每1 ms读取和处理一次输入
+    // read physical inputs and update internal state
     void update();
 
     /*
-     * 获取当前输入状态。
+     * reach current inputs
      *
-     * speedUp和speedDown是一次性事件：
-     * 返回后会自动清除。
+     * automatically clear speedUp/speedDown events after reading
      */
     InputState consumeState();
 
 private:
-    // 六个输入经过消抖后的稳定状态
+    // six stable states after debouncing
     uint8_t stableControlMask_ = 0;
 
-    // 六个输入的消抖计数器
+    // debouncing counters for six inputs
     uint8_t controlCounters_[6] = {};
 
-    // 手动模式开关
+    // manual mode state and counter for debouncing
     bool manualMode_ = false;
     uint8_t manualModeCounter_ = 0;
 
-    // 急停状态
+    // emergency stop state
     bool estopActive_ = false;
 
     /*
-     * 速度按键事件。
+     *speedUp/speedDown events
      *
-     * 一旦检测到一次HIGH→LOW，就保持为true，
-     * 直到UART发送程序读取并清除。
+     *once set, these events will remain true until the UART sending program reads and clears them.
+     * until the UART sending program reads and clears them.
      */
     bool speedUpEvent_ = false;
     bool speedDownEvent_ = false;
