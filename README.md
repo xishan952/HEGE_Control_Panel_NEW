@@ -1,22 +1,22 @@
 # HEGE_Control_Panel
 
 ## 1. Overview
-
+The HEGE Control Panel is an ESP32-S3-based system for vehicle monitoring and manual control. It receives physical control inputs, communicates with the vehicle via CAN bus, and displays vehicle and control status through an LVGL-based user interface.
 ## 2. Hardware
 |  GPIO / Expander Pin  |
 |----------------|------|
-| CAN TX         | TODO |
-| CAN RX         | TODO |
-| Forward Button | TODO |
-| Backward Button| TODO |
-| Left Button    | TODO |
-| Right Button   | TODO |
-| Speed + Button |      |
-| Speed - Button |      |
-| Mode 1         |      |
-| Mode 2         |      |
+| CAN TX         | 20 |
+| CAN RX         | 19 |
+| Forward Button | 04 |
+| Backward Button| 05 |
+| Left Button    | 06 |
+| Right Button   | 07 |
+| Speed + Button | 08 |
+| Speed - Button | 09 |
+| ManuelModeSwitch | 12 |
 
--CAN bus: TODO kbit/s
+
+-Baud rate：115200 
 -Physical inputs: 4 direction buttons, 2 speed buttons, 1 rotary encoder for MANUAL / AUTO mode selection
 -CAN reception remains active in both MANUAL and AUTO mode.
 
@@ -47,7 +47,6 @@ AUTO_MODE ──(mode encoder selects MANUAL /
 
 ## 4. CAN Communication
    ### 4.1 Received CAN Messages
-   不受到state maschine的控制，持续接收can 信号
    
       0x315  |  recieve speed feedback
       0x215  |  Receive control confirmation / challenge / status feedback, including SOC
@@ -90,13 +89,12 @@ AUTO_MODE ──(mode encoder selects MANUAL /
 | Right turn      |   `1`    |    `2`    |
 | Neutral / Stop  |   `0`    |    `0`    |
 
-   ### 4.3 CAN Timeout
    
 ## 5. UI Layout
 
-| UI item        | Source type                          | Source                         | Description                                                                 |
-| -------------- | ------------------------------------ | ------------------------------ | --------------------------------------------------------------------------- |
-| CAN connected  | Software status                      | CAN receive check              | Shows `Connected` if valid CAN frames are received; otherwise shows `Error` |
+| UI item          | Source type     | Source             | Description |
+|------------------|-----------------|--------------------|-------------|
+| Control Source   | Software status | CAN receive check  | Shows `REMOTE CONTROL` when remote control is detected, `PANEL CONTROL` when the control panel has taken control, and `ERROR` when CAN communication is unavailable. |
 | Battery        | CAN feedback                         | `0x215`, Byte 6–7              | Displays battery state of charge                                            |
 | Speed          | CAN feedback                         | `0x315`, Byte 0–3 and Byte 4–7 | Displays left and right speed feedback                                      |
 | Steering mode  | CAN feedback                         | `0x215`, Byte 4                | Displays steering/output feedback; bit mapping still has to be confirmed    |
@@ -104,13 +102,42 @@ AUTO_MODE ──(mode encoder selects MANUAL /
 | Mode           | Local physical input + state machine | Mode encoder and control state | Displays `AUTO`, `WAIT_EXT_CONTROL_OK`, or `MANUAL_ACTIVE`                  |
 
 
+## 6.Project Structure
+HEGE-Control-Panel/
+│
+├── main.cpp
+│
+├── config/
+│   └── AppConfig.h
+│
+├── can/
+│   ├── CanDriver.cpp
+│   ├── CanDriver.h
+│   ├── CanFrame.h
+│   ├── CanProtocol.cpp
+│   └── CanProtocol.h
+│
+├── input/
+│   ├── InputData.h
+│   ├── PhysicalInput.cpp
+│   └── PhysicalInput.h
+│
+├── state/
+│   ├── ControlStateMachine.cpp
+│   └── ControlStateMachine.h
+│
+└── ui/
+    ├── HEGE_UI.cpp
+    ├── HEGE_UI.h
+    ├── VehicleStatus.cpp
+    └── VehicleStatus.h
+    
+The project is divided into several functional modules:
 
-## 6. Physical Inputs
-## 7. Timing
-## 8. Safety and Error Handling
-## 9. Power Supply
-## 10. Mechanical Design
-## 11. Main Loop Structure
-## 12. Software Structure
-## 13. Testing
-## 14. Notes
+main.cpp/ – Initializes the system and coordinates CAN communication, physical inputs, the control state machine, and the user interface.
+config/ – Contains the main system configuration parameters.
+can/ – Handles CAN driver initialization, CAN frame transmission/reception, and CAN protocol encoding/decoding.
+input/ – Handles physical button and mode inputs received from the external ESP32.
+state/ – Implements the AUTO/MANUAL control state machine and generates vehicle control commands.
+ui/ – Stores vehicle status information and manages the LVGL-based display interface.
+External_Input_Board/ – Contains the firmware for the external ESP32 board responsible for reading physical control inputs and transmitting them to the main control panel.
